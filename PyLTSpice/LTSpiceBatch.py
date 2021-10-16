@@ -138,9 +138,10 @@ else:
 class RunTask(threading.Thread):
     """This is an internal Class and should not be used directly by the User."""
 
-    def __init__(self, run_no, netlist_file: str, callback: Callable[[str, str], Any], timeout=None, verbose=True):
-        self.verbose = verbose
-        self.timeout = timeout  # Thanks to Daniel Phili for implemnting this
+    def __init__(self, run_no, netlist_file: str, callback: Callable[[str, str], Any], **kwargs) -> None:
+        self.verbose = bool(kwargs.get('verbose', True))
+        self.timeout = kwargs.get('timeout')  # Thanks to Daniel Phili for implementing this
+        self.exe_path = kwargs.get('exe_path', default_exe_path)
 
         threading.Thread.__init__(self)
         self.setName("sim%d" % run_no)
@@ -149,13 +150,13 @@ class RunTask(threading.Thread):
         self.callback = callback
         self.retcode = -1  # Signals an error by default
 
-    def run(self):
+    def run(self) -> None:
         # Setting up
         logger = logging.getLogger("sim%d" % self.run_no)
         logger.setLevel(logging.INFO)
 
         # Running the Simulation
-        cmd_run = [str(default_exe_path),
+        cmd_run = [str(self.exe_path),
                    *LTspice_arg.get('run', []),
                    self.netlist_file,
                    *cmdline_switches]
@@ -205,17 +206,19 @@ class SimCommander(SpiceEditor):
     """
     The SimCommander class implements all the methods required for launching batches of LTSpice simulations.
     """
-    def __init__(self, circuit_file: Union[Path, str], **kwargs):
+    def __init__(self, circuit_file: Union[Path, str], **kwargs) -> None:
         """
         Class Constructor. It serves to start batches of simulations.
         See Class documentation for more information.
         """
+        self.exe_path = Path(kwargs.get('exe_path', default_exe_path))
+
         self.verbose = bool(kwargs.get("verbose", True))
         self.timeout = kwargs.get("timeout")
 
         file = Path(circuit_file)
         self.file_path = file.parent
-        self.file_name, file_ext = file.stem, file.suffix
+        self.file_name = file.stem
         self.circuit_radic = file.with_suffix('')
 
         self.cmdline_switches = []
@@ -234,12 +237,13 @@ class SimCommander(SpiceEditor):
         # self.failParam = []  # collects for later user investigation of failed parameter sets
         self.netlist = []  # Netlist needs to be created in the __init__ for LINT purposes
 
-        if file_ext == '.asc':
-            self.netlist_file = self.circuit_radic + '.net'
+        if file.suffix == '.asc':
+            self.netlist_file = self.circuit_radic.with_suffix('.net')
             # prepare instructions, two stages used to enable edits on the netlist w/o open GUI
             # see: https://www.mikrocontroller.net/topic/480647?goto=5965300#5965300
             assert 'netlist' in LTspice_arg, "In this platform LTSpice doesn't have netlist generation capabilities "
-            cmd_netlist = [str(default_exe_path), *LTspice_arg.get('netlist', []),
+            cmd_netlist = [str(self.exe_path),
+                           *LTspice_arg.get('netlist', []),
                            str(file)]
 
             if self.verbose:
@@ -257,23 +261,23 @@ class SimCommander(SpiceEditor):
         if not self.netlist:
             self.logger.error("Unable to create Netlist")
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Class Destructor : Closes Everything"""
         self.logger.debug("Waiting for all spawned threads to finish.")
         self.wait_completion()  # TODO: Kill all pending simulations
         self.logger.debug("Exiting SimCommander")
 
-    def setLTspiceRunCommand(self, run_command: str) -> None:
-        """
-        Manually setting the LTSpice run command
+    # def setLTspiceRunCommand(self, run_command: str) -> None:
+    #     """
+    #     Manually setting the LTSpice run command
 
-        :param path: String containing the command to be invoked to run LTSpice
-        :type path: str
-        :return: Nothing
-        :rtype: None
-        """
-        global default_exe_path
-        default_exe_path = run_command
+    #     :param path: String containing the command to be invoked to run LTSpice
+    #     :type path: str
+    #     :return: Nothing
+    #     :rtype: None
+    #     """
+    #     global default_exe_path
+    #     default_exe_path = run_command
 
     def add_LTspiceRunCmdLineSwitches(self, *args) -> None:
         """
@@ -333,7 +337,8 @@ class SimCommander(SpiceEditor):
 
                 if (wait_resource is False) or (len(self.threads) < self.parallel_sims):
                     t = RunTask(self.runno, run_netlist_file, callback,
-                                timeout=self.timeout, verbose=self.verbose)
+                                timeout=self.timeout, verbose=self.verbose,
+                                exe_path=self.exe_path)
                     self.threads.append(t)
                     t.start()
                     sleep(0.01)  # Give slack for the thread to start
@@ -412,7 +417,7 @@ class LTCommander(SimCommander):
             # Write the new settings
             run_netlist_file = "%s_%i.net" % (self.circuit_radic, self.runno)
             self.write_netlist(run_netlist_file)
-            cmd_run = [str(default_exe_path),
+            cmd_run = [str(self.exe_path),
                        *LTspice_arg.get('run', []),
                        run_netlist_file]
 
