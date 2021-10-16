@@ -111,20 +111,20 @@ import traceback
 from typing import Callable, Any, Union
 from PyLTSpice.SpiceEditor import SpiceEditor
 
-__all__ = ('SimCommander', 'cmdline_switches', 'default_exe_path')
+__all__ = ('SimCommander', 'cmdline_switches', 'DEFAULT_EXE_PATH')
 
 END_LINE_TERM = '\n'
 
 logging.basicConfig(filename='LTSpiceBatch.log', level=logging.INFO)
 
 if sys.platform == "linux":
-    default_exe_path = 'wine C:\\\\Program\\ Files\\\\LTC\\\\LTspiceXVII\\\\XVIIx64.exe'
+    DEFAULT_EXE_PATH = 'wine C:\\\\Program\\ Files\\\\LTC\\\\LTspiceXVII\\\\XVIIx64.exe'
     LTspice_arg = {'run': ['-b', '-Run']}
 elif sys.platform == "darwin":
-    default_exe_path = Path('/Applications/LTspice.app/Contents/MacOS/LTspice')
+    DEFAULT_EXE_PATH = Path('/Applications/LTspice.app/Contents/MacOS/LTspice')
     LTspice_arg = {'run': ['-b']}
 else:  # Windows
-    default_exe_path = Path(r"C:\Program Files\LTC\LTspiceXVII\XVIIx64.exe")
+    DEFAULT_EXE_PATH = Path(r"C:\Program Files\LTC\LTspiceXVII\XVIIx64.exe")
     LTspice_arg = {'netlist': ['-netlist'], 'run': ['-b', '-Run']}
 
 # Legacy
@@ -133,30 +133,26 @@ LTspiceIV_exe = [Path(r"C:\Program Files (x86)\LTC\LTspiceIV\scad3.exe")]
 cmdline_switches = []
 
 
-if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
-    clock_function = time.process_time
-
-    def run_function(command, timeout=None):
-        result = subprocess.run(command, timeout=timeout)
-        return result.returncode
-else:
-    clock_function = time.clock
-
-    def run_function(command, timeout=None):
-        return subprocess.call(command, timeout=timeout)
+def run_function(command, timeout=None) -> int:
+    result = subprocess.run(command, timeout=timeout)
+    return result.returncode
 
 
 class RunTask(threading.Thread):
-    """This is an internal Class and should not be used directly by the User."""
+    """
+    This is an internal Class and should not be used directly by the User.
+    """
 
-    def __init__(self, run_no, netlist_file: Union[Path, str], callback: Callable[[str, str], Any], **kwargs) -> None:
+    def __init__(self, run_no, netlist_file: Union[Path, str],
+                 callback: Callable[[str, str], Any], **kwargs) -> None:
+
         self.verbose = bool(kwargs.get('verbose', True))
-        self.timeout = kwargs.get('timeout')  # Thanks to Daniel Phili for implementing this
-        self.exe_path = kwargs.get('exe_path', default_exe_path)
+        self.timeout = kwargs.get('timeout')
+        self.exe_path = kwargs.get('exe_path', DEFAULT_EXE_PATH)
 
         threading.Thread.__init__(self)
-        self.setName("sim%d" % run_no)
-        self.run_no = run_no
+        self.run_no = int(run_no)
+        self.setName(f"sim{self.run_no}")
         self.netlist_file = Path(netlist_file)
         self.callback = callback
         self.retcode = -1  # Signals an error by default
@@ -173,21 +169,21 @@ class RunTask(threading.Thread):
                    *cmdline_switches]
 
         # run the simulation
-        self.start_time = clock_function()
+        self.start_time = time.process_time()
         if self.verbose:
-            print(time.asctime(), ": Starting simulation %d" % self.run_no)
+            print(f"{time.asctime()}: Starting simulation {self.run_no}")
 
         # start execution
         self.retcode = run_function(cmd_run, timeout=self.timeout)
 
         # print simulation time
-        sim_time = time.strftime("%H:%M:%S", time.gmtime(clock_function() - self.start_time))
+        sim_time = time.strftime("%H:%M:%S", time.gmtime(time.process_time() - self.start_time))
 
         # Cleanup everything
         if self.retcode == 0:
             # simulation succesfull
             if self.verbose:
-                print(time.asctime() + ": Simulation Successful. Time elapsed %s:%s" % (sim_time, END_LINE_TERM))
+                print(f"{time.asctime()}: Simulation Successful. Time elapsed {sim_time}:{END_LINE_TERM}")
             if self.callback:
                 raw_file = self.netlist_file.with_suffix('.raw')
                 log_file = self.netlist_file.with_suffix('.log')
@@ -200,7 +196,7 @@ class RunTask(threading.Thread):
                         error = traceback.format_tb(err)
                         logger.error(error)
                 else:
-                    logger.error("Simulation Raw file or Log file were not found")
+                    logger.error("Simulation Raw/Log file not found")
             else:
                 if self.verbose:
                     print('No Callback')
@@ -222,7 +218,7 @@ class SimCommander(SpiceEditor):
         Class Constructor. It serves to start batches of simulations.
         See Class documentation for more information.
         """
-        self.exe_path = Path(kwargs.get('exe_path', default_exe_path))
+        self.exe_path = Path(kwargs.get('exe_path', DEFAULT_EXE_PATH))
 
         self.verbose = bool(kwargs.get("verbose", True))
         self.timeout = kwargs.get("timeout")
@@ -277,18 +273,6 @@ class SimCommander(SpiceEditor):
         self.logger.debug("Waiting for all spawned threads to finish.")
         self.wait_completion()  # TODO: Kill all pending simulations
         self.logger.debug("Exiting SimCommander")
-
-    # def setLTspiceRunCommand(self, run_command: str) -> None:
-    #     """
-    #     Manually setting the LTSpice run command
-
-    #     :param path: String containing the command to be invoked to run LTSpice
-    #     :type path: str
-    #     :return: Nothing
-    #     :rtype: None
-    #     """
-    #     global default_exe_path
-    #     default_exe_path = run_command
 
     def add_LTspiceRunCmdLineSwitches(self, *args) -> None:
         """
@@ -365,7 +349,7 @@ class SimCommander(SpiceEditor):
             # no simulation required
             raise UserWarning(f'skipping simulation {self.runno}')
 
-    def updated_stats(self):
+    def updated_stats(self) -> None:
         """
         This function updates the OK/Fail statistics and releases finished
         RunTask objects from memory.
@@ -384,7 +368,7 @@ class SimCommander(SpiceEditor):
                     self.failSim += 1
                 del self.threads[i]
 
-    def wait_completion(self):
+    def wait_completion(self) -> None:
         """
         This function will wait for the execution of all scheduled simulations
         to complete.
@@ -405,16 +389,16 @@ class LTCommander(SimCommander):
     supports multi-processing.
     """
 
-    def __init__(self, circuit_file: Union[Path, str]):
+    def __init__(self, circuit_file: Union[Path, str]) -> None:
         warn("Deprecated Class. Please use the new SimCommander class instead of LTCommander\n"
              "For more information consult. https://www.nunobrum.com/pyspicer.html", DeprecationWarning)
         SimCommander.__init__(self, circuit_file, 1)
 
-    def write_log(self, text: str):
+    def write_log(self, text: str) -> None:
 
         terminator = '' if text.endswith(END_LINE_TERM) else END_LINE_TERM
 
-        with open(self.circuit_radic + '.masterlog', 'a') as mlog:
+        with open(self.circuit_radic.with_suffix('.masterlog'), 'a') as mlog:
             mlog.write(f"{time.asctime()}:{text}{terminator}")
 
     def run(self, run_id=None):
@@ -438,7 +422,7 @@ class LTCommander(SimCommander):
                        run_netlist_file]
 
             # run the simulation
-            start_time = clock_function()
+            start_time = time.process_time()
             print(time.asctime(), ": Starting simulation %d" % self.runno)
 
             # start execution
@@ -449,7 +433,7 @@ class LTCommander(SimCommander):
             raw_file = netlist_radic + '.raw'
             log_file = netlist_radic + '.log'
             # print simulation time
-            sim_time = time.strftime("%H:%M:%S", time.gmtime(clock_function() - start_time))
+            sim_time = time.strftime("%H:%M:%S", time.gmtime(time.process_time() - start_time))
             # handle simstate
             if retcode == 0:
                 # simulation successful
@@ -470,9 +454,9 @@ class LTCommander(SimCommander):
                 return raw_file, log_file  # Return rawfile and logfile if simulation was OK
             else:
                 return None, log_file
-        else:
-            # no simulation required
-            raise UserWarning('skipping simulation ' + str(self.runno))
+
+        # no simulation required
+        raise UserWarning('skipping simulation ' + str(self.runno))
 
 
 if __name__ == "__main__":
