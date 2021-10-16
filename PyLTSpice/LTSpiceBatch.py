@@ -12,19 +12,21 @@
 # Licence:     lGPL v3
 # -------------------------------------------------------------------------------
 """
-Allows to launch LTSpice simulations from a Python Script, thus allowing to overcome the 3 dimensions STEP limitation on
-LTSpice, update resistor values, or component models.
+Allows to launch LTSpice simulations from a Python Script, thus allowing to
+overcome the 3 dimensions STEP limitation on LTSpice, update resistor values,
+or component models.
 
-In the code snipped below will simulate a circuit with two different diode models, setting the simulation
-temperature to 80 degrees and updates the values of R1 and R2 to 3.3k. ::
+In the code snipped below will simulate a circuit with two different diode
+models, setting the simulation temperature to 80 degrees and updates the values
+of R1 and R2 to 3.3k. ::
 
     LTC = SimCommander("my_circuit.asc")
     LTC.set_parameters(temp=80)  # Sets the simulation temperature to be 80 degrees
-    LTC.set_component_value('R2', '3.3k')  #  Updates the resistor R2 value to be 3.3k
+    LTC.set_component_value('R2', '3.3k')
     for dmodel in ("BAT54", "BAT46WJ"):
         LTC.set_element_model("D1", model)  # Sets the Diode D1 model
-        for res_value in sweep(2.2, 2,4, 0.2):  # Steps from 2.2 to 2.4 with 0.2 increments
-            LTC.set_component_value('R1', res_value)  #  Updates the resistor R1 value to be 3.3k
+        for res_value in range(2.2, 2,4, 0.2):
+            LTC.set_component_value('R1', res_value)
             LTC.run()
 
     LTC.wait_completion()  # Waits for the LTSpice simulations to complete
@@ -33,56 +35,66 @@ temperature to 80 degrees and updates the values of R1 and R2 to 3.3k. ::
     print("Successful Simulations: {}".format(LTC.okSim))
     print("Failed Simulations: {}".format(LTC.failSim))
 
-The first line will create an python class instance that represents the LTSpice file or netlist that is to be
-simulated. This object implements methods that are used to manipulate the spice netlist. For example, the method
-set_parameters() will set or update existing parameters defined in the netlist. The method set_component_value() is
-used to update existing component values or models.
+The first line will create an python class instance that represents the LTSpice
+file or netlist that is to be simulated. This object implements methods that
+are used to manipulate the spice netlist. For example, the method
+set_parameters() will set or update existing parameters defined in the netlist.
+The method set_component_value() is used to update existing component values or
+models.
 
 ---------------
 Multiprocessing
 ---------------
 
-For making better use of today's computer capabilities, the SimCommander spawns several LTSpice instances
-each executing in parallel a simulation.
-By default the number of parallel simulations is 4, however the user can override this in two ways. Either
-using the class constructor argument ``parallel_sims`` or by forcing the allocation of more processes in the
-run() call by setting ``wait_resource=False``. ::
+For making better use of today's computer capabilities, the SimCommander spawns
+several LTSpice instances each executing in parallel a simulation. By default
+the number of parallel simulations is 4, however the user can override this in
+two ways. Either using the class constructor argument ``parallel_sims`` or by
+forcing the allocation of more processes in the run() call by setting
+``wait_resource=False``. ::
 
     LTC.run(wait_resource=False)
 
-The recommended way is to set the parameter ``parallel_sims`` in the class constructor. ::
+The recommended way is to set the parameter ``parallel_sims`` in the class
+constructor. ::
 
     LTC=SimCommander("my_circuit.asc", parallel_sims=8)
 
-The user then can launch a simulation with the updates done to the netlist by calling the run() method. Since the
-processes are not executed right aways, but rather just scheduled for simulation, the wait_completion() function is
-needed if the user wants to execute code only after the completion of all scheduled simulations.
+The user then can launch a simulation with the updates done to the netlist by
+calling the run() method. Since the processes are not executed right aways, but
+rather just scheduled for simulation, the wait_completion() function is needed
+if the user wants to execute code only after the completion of all scheduled
+simulations.
 
-The usage of wait_completion() is optional. Just note that the script will only end when all the scheduled tasks are
-executed.
+The usage of wait_completion() is optional. Just note that the script will only
+end when all the scheduled tasks are executed.
 
 ---------
 Callbacks
 ---------
 
-As seen above, the `wait_completion()` can be used to wait for all the simulations to be finished. However, this is
-not efficient on a multiprocessor point of view. Ideally, the post-processing should be also handled while other
-simulations are still running. For this purpose, the user can use a function call backs.
+As seen above, the `wait_completion()` can be used to wait for all the
+simulations to be finished. However, this is not efficient on a multiprocessor
+point of view. Ideally, the post-processing should be also handled while other
+simulations are still running. For this purpose, the user can use a function
+call backs.
 
-The callback function is called when the simulation has finished direclty by the thread that has handling the
-simulation. A function callback receives two arguments.
-The RAW file and the LOG file names. Below is an example of a callback function::
+The callback function is called when the simulation has finished direclty by
+the thread that has handling the simulation. A function callback receives two
+arguments.
+The RAW file and the LOG file names. Below is an example of a callback
+function::
 
     def processing_data(raw_filename, log_filename):
         '''This is a call back function that just prints the filenames'''
-        print("Simulation Raw file is %s. The log is %s" % (raw_filename, log_filename)
+        print(f"Simulation Raw file is {raw_filename}. log is {log_filename}")
         # Other code below either using LTSteps.py or LTSpice_RawRead.py
         log_info = LTSpiceLogReader(log_filename)
         log_info.read_measures()
         rise, measures = log_info.dataset["rise_time"]
 
-The callback function is optional. if there no callback function is given then thread is terminated just after the
-simulation is finished.
+The callback function is optional. if there no callback function is given then
+thread is terminated just after the simulation is finished.
 """
 __author__ = "Nuno Canto Brum <nuno.brum@gmail.com>"
 __copyright__ = "Copyright 2020, Fribourg Switzerland"
@@ -202,7 +214,8 @@ class RunTask(threading.Thread):
 
 class SimCommander(SpiceEditor):
     """
-    The SimCommander class implements all the methods required for launching batches of LTSpice simulations.
+    The SimCommander class implements all the methods required for launching
+    batches of LTSpice simulations.
     """
     def __init__(self, circuit_file: Union[Path, str], **kwargs) -> None:
         """
@@ -296,23 +309,26 @@ class SimCommander(SpiceEditor):
             callback: Callable[[str, str], Any] = None) -> int:
         """
         Executes a simulation run with the conditions set by the user.
-        Conditions are set by the set_parameter, set_component_value or add_instruction functions.
+        Conditions are set by the set_parameter, set_component_value or
+        add_instruction functions.
 
         :param run_filename:
-            The name of the netlist can be optionally overridden if the user wants to have a better control of how the
-            simulations files are generated.
+            The name of the netlist can be optionally overridden if the user
+            wants to have a better control of how the simulations files are
+            generated.
         :type run_filename: str
         :param wait_resource:
-            Setting this parameter to False, will force the simulation to start immediately, irrespective of the number
-            of simulations already active.
-            By default the SimCommander class uses only four processors. This number can then be overridden by setting
-            the parameter ´parallel_sims´ to a different number.
-            If there are more than ´parallel_sims´ simulations being done, the new one will be placed on hold till one
-            of the other simulations are finished.
+            Setting this parameter to False, will force the simulation to start
+            immediately, irrespective of the number of simulations already
+            active. By default the SimCommander class uses only four
+            processors. This number can then be overridden by setting the
+            parameter ´parallel_sims´ to a different number. If there are more
+            than ´parallel_sims´ simulations being done, the new one will be
+            placed on hold till one of the other simulations are finished.
         :type wait_resource: bool
         :param callback:
-            The user can optionally give a callback function for when the simulation finishes, so that a processing can
-            be immediately done.
+            The user can optionally give a callback function for when the
+            simulation finishes, so that a processing can be immediately done.
         :type: callback: function(raw_file, log_file)
 
         :returns: Nothing
@@ -324,7 +340,7 @@ class SimCommander(SpiceEditor):
 
             # Write the new settings
             if run_filename is None:
-                run_netlist_file = "%s_%i.net" % (self.circuit_radic, self.runno)
+                run_netlist_file = f"{self.circuit_radic}_{self.runno}.net"
             else:
                 run_netlist_file = run_filename
 
@@ -347,11 +363,12 @@ class SimCommander(SpiceEditor):
 
         else:
             # no simulation required
-            raise UserWarning('skipping simulation ' + str(self.runno))
+            raise UserWarning(f'skipping simulation {self.runno}')
 
     def updated_stats(self):
         """
-        This function updates the OK/Fail statistics and releases finished RunTask objects from memory.
+        This function updates the OK/Fail statistics and releases finished
+        RunTask objects from memory.
 
         :returns: Nothing
         """
@@ -369,7 +386,8 @@ class SimCommander(SpiceEditor):
 
     def wait_completion(self):
         """
-        This function will wait for the execution of all scheduled simulations to complete.
+        This function will wait for the execution of all scheduled simulations
+        to complete.
 
         :returns: Nothing
         """
@@ -458,12 +476,14 @@ class LTCommander(SimCommander):
 
 
 if __name__ == "__main__":
+
     # get script absolute path
-    meAbsPath = Path(__file__).parent.parent.absolute()
+    root_path = Path(__file__).parent.parent.absolute()
+
     # select spice model
-    LTC = LTCommander(meAbsPath.joinpath("test_files", "testfile.asc"))
-    # set default arguments
-    LTC.set_parameters(res=0.001, cap=100e-6)
+    LTC = LTCommander(root_path.joinpath("test_files", "testfile.asc"))
+    LTC.set_parameters(res=1e-3, cap=100e-6)  # set default arguments
+
     # define simulation
     LTC.add_instructions(
         "; Simulation settings",
@@ -471,28 +491,33 @@ if __name__ == "__main__":
         ".TRAN 3m",
         # ".step param run 1 2 1"
     )
+
     # do parameter sweep
     for res in range(5):
-        # LTC.runs_to_do = range(2)
         LTC.set_parameters(ANA=res)
         raw, log = LTC.run()
         print("Raw file '%s' | Log File '%s'" % (raw, log))
+
     # Sim Statistics
-    print('Successful/Total Simulations: ' + str(LTC.okSim) + '/' + str(LTC.runno))
+    print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.runno}')
 
     def callback_function(raw_file, log_file):
-        print("Handling the simulation data of %s, log file %s" % (raw_file, log_file))
+        print(f"Handling simulation data for {raw_file}, log file {log_file}")
 
-    LTC = SimCommander(meAbsPath + "\\test_files\\testfile.asc", parallel_sims=1)
+    LTC = SimCommander(root_path.joinpath("test_files", "testfile.asc"),
+                       parallel_sims=1)
     tstart = 0
     for tstop in (2, 5, 8, 10):
         tduration = tstop - tstart
         LTC.add_instruction(".tran {}".format(tduration),)
+        bias_file = "sim_loadbias_%d.txt" % tstop
+
         if tstart != 0:
             LTC.add_instruction(".loadbias {}".format(bias_file))
             # Put here your parameter modifications
-            # LTC.set_parameters(param1=1, param2=2, param3=3)
-        bias_file = "sim_loadbias_%d.txt" % tstop
-        LTC.add_instruction(".savebias {} internal time={}".format(bias_file, tduration))
+            LTC.set_parameters(param1=1, param2=2, param3=3)
+
+        LTC.add_instruction(".savebias {} internal time={}".format(bias_file,
+                                                                   tduration))
         tstart = tstop
         LTC.run(callback=callback_function)
