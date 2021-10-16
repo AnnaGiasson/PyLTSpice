@@ -91,7 +91,6 @@ from warnings import warn
 import subprocess
 import threading
 import logging
-import os
 from pathlib import Path
 import time
 from time import sleep
@@ -138,7 +137,7 @@ else:
 class RunTask(threading.Thread):
     """This is an internal Class and should not be used directly by the User."""
 
-    def __init__(self, run_no, netlist_file: str, callback: Callable[[str, str], Any], **kwargs) -> None:
+    def __init__(self, run_no, netlist_file: Union[Path, str], callback: Callable[[str, str], Any], **kwargs) -> None:
         self.verbose = bool(kwargs.get('verbose', True))
         self.timeout = kwargs.get('timeout')  # Thanks to Daniel Phili for implementing this
         self.exe_path = kwargs.get('exe_path', default_exe_path)
@@ -146,7 +145,7 @@ class RunTask(threading.Thread):
         threading.Thread.__init__(self)
         self.setName("sim%d" % run_no)
         self.run_no = run_no
-        self.netlist_file = netlist_file
+        self.netlist_file = Path(netlist_file)
         self.callback = callback
         self.retcode = -1  # Signals an error by default
 
@@ -158,7 +157,7 @@ class RunTask(threading.Thread):
         # Running the Simulation
         cmd_run = [str(self.exe_path),
                    *LTspice_arg.get('run', []),
-                   self.netlist_file,
+                   str(self.netlist_file),
                    *cmdline_switches]
 
         # run the simulation
@@ -178,10 +177,9 @@ class RunTask(threading.Thread):
             if self.verbose:
                 print(time.asctime() + ": Simulation Successful. Time elapsed %s:%s" % (sim_time, END_LINE_TERM))
             if self.callback:
-                netlist_radic = self.netlist_file.rstrip('.net')
-                raw_file = netlist_radic + '.raw'
-                log_file = netlist_radic + '.log'
-                if os.path.exists(raw_file) and os.path.exists(log_file):
+                raw_file = self.netlist_file.with_suffix('.raw')
+                log_file = self.netlist_file.with_suffix('.log')
+                if raw_file.exists() and log_file.exists():
                     if self.verbose:
                         print("Calling the callback function")
                     try:
@@ -196,10 +194,10 @@ class RunTask(threading.Thread):
                     print('No Callback')
         else:
             # simulation failed
-            logger.warning(time.asctime() + ": Simulation Failed. Time elapsed %s:%s" % (sim_time, END_LINE_TERM))
-            netlist_radic = self.netlist_file.rstrip('.net')
-            if os.path.exists(netlist_radic + '.log'):
-                os.rename(netlist_radic + '.log', netlist_radic + '.fail')
+            logger.warning(f"{time.asctime()}: Simulation Failed. Time elapsed {sim_time}:{END_LINE_TERM}")
+            log_file = self.netlist_file.with_suffix('.log')
+            if log_file.exists():
+                log_file.rename(log_file.with_suffix('.fail'))
 
 
 class SimCommander(SpiceEditor):
