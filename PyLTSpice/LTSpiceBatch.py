@@ -92,31 +92,32 @@ import subprocess
 import threading
 import logging
 import os
+from pathlib import Path
 import time
 from time import sleep
 import sys
 import traceback
-from typing import Optional, Callable, Union, Any
+from typing import Callable, Any, Union
 from PyLTSpice.SpiceEditor import SpiceEditor
 
-__all__ = ('SimCommander', 'cmdline_switches', 'LTspice_exe')
+__all__ = ('SimCommander', 'cmdline_switches', 'default_exe_path')
 
 END_LINE_TERM = '\n'
 
 logging.basicConfig(filename='LTSpiceBatch.log', level=logging.INFO)
 
 if sys.platform == "linux":
-    LTspice_exe = 'wine C:\\\\Program\\ Files\\\\LTC\\\\LTspiceXVII\\\\XVIIx64.exe'
+    default_exe_path = 'wine C:\\\\Program\\ Files\\\\LTC\\\\LTspiceXVII\\\\XVIIx64.exe'
     LTspice_arg = {'run': ['-b', '-Run']}
 elif sys.platform == "darwin":
-    LTspice_exe = '/Applications/LTspice.app/Contents/MacOS/LTspice'
+    default_exe_path = Path('/Applications/LTspice.app/Contents/MacOS/LTspice')
     LTspice_arg = {'run': ['-b']}
 else:  # Windows
-    LTspice_exe = [r"C:\Program Files\LTC\LTspiceXVII\XVIIx64.exe"]
+    default_exe_path = Path(r"C:\Program Files\LTC\LTspiceXVII\XVIIx64.exe")
     LTspice_arg = {'netlist': ['-netlist'], 'run': ['-b', '-Run']}
 
 # Legacy
-LTspiceIV_exe = [r"C:\Program Files (x86)\LTC\LTspiceIV\scad3.exe"]
+LTspiceIV_exe = [Path(r"C:\Program Files (x86)\LTC\LTspiceIV\scad3.exe")]
 
 cmdline_switches = []
 
@@ -137,14 +138,14 @@ else:
 class RunTask(threading.Thread):
     """This is an internal Class and should not be used directly by the User."""
 
-    def __init__(self, run_no, netlis_file: str, callback: Callable[[str, str], Any], timeout=None, verbose=True):
+    def __init__(self, run_no, netlist_file: str, callback: Callable[[str, str], Any], timeout=None, verbose=True):
         self.verbose = verbose
         self.timeout = timeout  # Thanks to Daniel Phili for implemnting this
-        
+
         threading.Thread.__init__(self)
         self.setName("sim%d" % run_no)
         self.run_no = run_no
-        self.netlist_file = netlis_file
+        self.netlist_file = netlist_file
         self.callback = callback
         self.retcode = -1  # Signals an error by default
 
@@ -154,7 +155,10 @@ class RunTask(threading.Thread):
         logger.setLevel(logging.INFO)
 
         # Running the Simulation
-        cmd_run = LTspice_exe + LTspice_arg.get('run', '') + [self.netlist_file] + cmdline_switches
+        cmd_run = [str(default_exe_path),
+                   *LTspice_arg.get('run', []),
+                   self.netlist_file,
+                   *cmdline_switches]
 
         # run the simulation
         self.start_time = clock_function()
@@ -201,23 +205,25 @@ class SimCommander(SpiceEditor):
     """
     The SimCommander class implements all the methods required for launching batches of LTSpice simulations.
     """
-    def __init__(self, circuit_file: str, parallel_sims: int = 4, timeout=None, verbose=True, file_id=''):
+    def __init__(self, circuit_file: Union[Path, str], **kwargs):
         """
         Class Constructor. It serves to start batches of simulations.
         See Class documentation for more information.
         """
-        self.verbose = verbose
-        self.timeout = timeout
-        
-        self.file_path = os.path.dirname(circuit_file)
-        self.file_name, file_ext = os.path.splitext(os.path.basename(circuit_file))
-        self.circuit_radic = os.path.join(self.file_path, self.file_name)
+        self.verbose = bool(kwargs.get("verbose", True))
+        self.timeout = kwargs.get("timeout")
+
+        file = Path(circuit_file)
+        self.file_path = file.parent
+        self.file_name, file_ext = file.stem, file.suffix
+        self.circuit_radic = file.with_suffix('')
 
         self.cmdline_switches = []
-        self.parallel_sims = parallel_sims
+        self.parallel_sims = int(kwargs.get("parallel_sims", 4))
         self.threads = []
 
-        # master_log_filename = self.circuit_radic + '.masterlog' TODO: create the JSON or YAML file
+        # TODO: create the JSON or YAML file
+        # master_log_filename = self.circuit_radic + '.masterlog'
         self.logger = logging.getLogger("SimCommander")
         self.logger.setLevel(logging.INFO)
         # TODO redirect this logger to a file.
@@ -233,7 +239,8 @@ class SimCommander(SpiceEditor):
             # prepare instructions, two stages used to enable edits on the netlist w/o open GUI
             # see: https://www.mikrocontroller.net/topic/480647?goto=5965300#5965300
             assert 'netlist' in LTspice_arg, "In this platform LTSpice doesn't have netlist generation capabilities "
-            cmd_netlist = LTspice_exe + LTspice_arg.get('netlist') + [circuit_file]
+            cmd_netlist = [str(default_exe_path), *LTspice_arg.get('netlist', []),
+                           str(file)]
 
             if self.verbose:
                 print("Creating Netlist")
@@ -247,7 +254,7 @@ class SimCommander(SpiceEditor):
             self.netlist_file = circuit_file
             self.reset_netlist()
 
-        if len(self.netlist) == 0:
+        if not self.netlist:
             self.logger.error("Unable to create Netlist")
 
     def __del__(self):
@@ -255,7 +262,6 @@ class SimCommander(SpiceEditor):
         self.logger.debug("Waiting for all spawned threads to finish.")
         self.wait_completion()  # TODO: Kill all pending simulations
         self.logger.debug("Exiting SimCommander")
-
 
     def setLTspiceRunCommand(self, run_command: str) -> None:
         """
@@ -266,9 +272,8 @@ class SimCommander(SpiceEditor):
         :return: Nothing
         :rtype: None
         """
-        global LTspice_exe
-        LTspice_exe = run_command
-
+        global default_exe_path
+        default_exe_path = run_command
 
     def add_LTspiceRunCmdLineSwitches(self, *args) -> None:
         """
@@ -379,19 +384,17 @@ class LTCommander(SimCommander):
     supports multi-processing.
     """
 
-    def __init__(self, circuit_file: str):
+    def __init__(self, circuit_file: Union[Path, str]):
         warn("Deprecated Class. Please use the new SimCommander class instead of LTCommander\n"
              "For more information consult. https://www.nunobrum.com/pyspicer.html", DeprecationWarning)
         SimCommander.__init__(self, circuit_file, 1)
 
-
     def write_log(self, text: str):
-        mlog = open(self.circuit_radic + '.masterlog', 'a')
-        if text.endswith(END_LINE_TERM):
-            mlog.write(time.asctime() + ':' + text)
-        else:
-            mlog.write(time.asctime() + ':' + text + END_LINE_TERM)
-        mlog.close()
+
+        terminator = '' if text.endswith(END_LINE_TERM) else END_LINE_TERM
+
+        with open(self.circuit_radic + '.masterlog', 'a') as mlog:
+            mlog.write(f"{time.asctime()}:{text}{terminator}")
 
     def run(self, run_id=None):
         """
@@ -409,7 +412,9 @@ class LTCommander(SimCommander):
             # Write the new settings
             run_netlist_file = "%s_%i.net" % (self.circuit_radic, self.runno)
             self.write_netlist(run_netlist_file)
-            cmd_run = LTspice_exe + LTspice_arg.get('run') + [run_netlist_file]
+            cmd_run = [str(default_exe_path),
+                       *LTspice_arg.get('run', []),
+                       run_netlist_file]
 
             # run the simulation
             start_time = clock_function()
@@ -451,10 +456,9 @@ class LTCommander(SimCommander):
 
 if __name__ == "__main__":
     # get script absolute path
-    meAbsPath = os.path.dirname(os.path.realpath(__file__))
-    meAbsPath, _ = os.path.split(meAbsPath)
+    meAbsPath = Path(__file__).parent.parent.absolute()
     # select spice model
-    LTC = LTCommander(meAbsPath + "\\test_files\\testfile.asc")
+    LTC = LTCommander(meAbsPath.joinpath("test_files", "testfile.asc"))
     # set default arguments
     LTC.set_parameters(res=0.001, cap=100e-6)
     # define simulation
@@ -472,7 +476,6 @@ if __name__ == "__main__":
         print("Raw file '%s' | Log File '%s'" % (raw, log))
     # Sim Statistics
     print('Successful/Total Simulations: ' + str(LTC.okSim) + '/' + str(LTC.runno))
-
 
     def callback_function(raw_file, log_file):
         print("Handling the simulation data of %s, log file %s" % (raw_file, log_file))

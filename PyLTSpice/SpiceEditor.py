@@ -29,19 +29,19 @@ SPICE_DOT_INSTRUCTIONS = (
     '.BACKANNO',
     '.END',
     '.ENDS',
-    '.FERRET', # Downloads a File from a given URL
+    '.FERRET',  # Downloads a File from a given URL
     '.FOUR',  # Compute a Fourier Component after a .TRAN Analysis
     '.FUNC', '.FUNCTION',
     '.GLOBAL',
     '.IC',
     '.INC', '.INCLUDE',  # Include another file
-    '.LIB', # Include a Library
-    '.LOADBIAS', # Load a Previously Solved DC Solution
-     # These Commands are part of the contraption Programming Language of the Arbitrary State Machine
+    '.LIB',  # Include a Library
+    '.LOADBIAS',  # Load a Previously Solved DC Solution
+    # These Commands are part of the contraption Programming Language of the Arbitrary State Machine
     '.MACHINE', '.STATE', '.RULE', '.OUTPUT', '.ENDMACHINE',
     '.MEAS', '.MEASURE',
     '.MODEL',
-    '.NET', # Compute Network Parameters in a .AC Analysis
+    '.NET',  # Compute Network Parameters in a .AC Analysis
     '.NODESET',  # Hints for Initial DC Solution
     '.OP',
     '.OPTIONS',
@@ -51,8 +51,7 @@ SPICE_DOT_INSTRUCTIONS = (
     '.STEP',
     '.SUBCKT',
     '.TEXT',
-    '.WAVE', # Write Selected Nodes to a .Wav File
-
+    '.WAVE',  # Write Selected Nodes to a .Wav File
 )
 
 REPLACE_REGXES = {
@@ -126,7 +125,7 @@ def format_eng(value):
         suffix = 'Meg'
     else:
         return '{:E}'.format(value)
-    return '{:g}{:}'.format(value* 1000**-e, suffix)
+    return '{:g}{:}'.format(value*1000**-e, suffix)
 
 
 def _get_group_regxstr(regstr, param):
@@ -192,6 +191,7 @@ def _first_token_upped(line):
         i += 1
     return line[j:i].upper()
 
+
 def _is_unique_instruction(instruction):
     """
     (Private function. Not to be used directly)
@@ -204,11 +204,12 @@ def _is_unique_instruction(instruction):
 class ComponentNotFoundError(Exception):
     """Component Not Found Error"""
 
+
 class ParameterNotFoundError(Exception):
     """ParameterNotFound Error"""
 
 
-class SpiceCircuit(object):
+class SpiceCircuit:
     """
     The Spice Circuit represents subcircuits within a SPICE circuit and since subcircuits can have subcircuits inside
     them, it serves as base for the top level netlist.
