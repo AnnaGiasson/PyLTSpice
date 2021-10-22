@@ -396,8 +396,9 @@ class SpiceCircuit:
             start, stop = m.span()
             self.netlist[param_line] = line[:start] + "{}={}".format(param, value) + line[stop:]
 
-    def set_parameters(self, **kwargs):
-        """Adds one or more parameters to the netlist.
+    def set_parameters(self, **kwargs) -> None:
+        """
+        Adds one or more parameters to the netlist.
         Usage: ::
 
             for temp in (-40, 25, 125):
@@ -405,13 +406,13 @@ class SpiceCircuit:
             LTC.set_parameters(TEMP=80, freq=freq)
 
         :key param_name:
-            Key is the parameter to be set. values the ther corresponding values. Values can either be a str; an int or
-            a float.
+            Key is the parameter to be set. values the ther corresponding
+            values. Values can either be a str; an int or a float.
 
         :returns: Nothing
         """
-        for param in kwargs:
-            self.set_parameter(param, kwargs[param])
+        for param, value in kwargs.items():
+            self.set_parameter(param, value)
 
     def set_component_value(self, device: str, value: Union[str, int, float]) -> None:
         """Changes the value of a component, such as a Resistor, Capacitor or Inductor.

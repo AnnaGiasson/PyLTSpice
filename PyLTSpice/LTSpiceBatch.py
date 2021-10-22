@@ -451,7 +451,7 @@ class LTCommander(SimCommander):
                 log_file += 'fail'
 
             if retcode == 0:  # If simulation is successful
-                return raw_file, log_file  # Return rawfile and logfile if simulation was OK
+                return raw_file, log_file
             else:
                 return None, log_file
 

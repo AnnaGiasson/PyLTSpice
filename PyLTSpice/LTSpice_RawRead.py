@@ -13,14 +13,15 @@
 # -------------------------------------------------------------------------------
 
 """
-This module reads data from an LTSpice RAW file.
-The main class object is the LTSpiceRawRead which is initialized with the filename of the RAW file to be processed.
-The object wil read the file and construct a structure of objects which can be used to access the data inside the
-RAW file.
-To understand why this is done so, in the next section follows a brief explanation of what is contained inside a RAW
-file.
-In case RAW file contains stepped data detected, i.e. when the .STEP command is used, then it will also try to open the
-simulation LOG file and try to obtain read the stepping information.
+This module reads data from an LTSpice RAW file. The main class object is the
+LTSpiceRawRead which is initialized with the filename of the RAW file to be
+processed. The object wil read the file and construct a structure of objects
+which can be used to access the data inside the RAW file.
+To understand why this is done so, in the next section follows a brief
+explanation of what is contained inside a RAW file.
+In case RAW file contains stepped data detected, i.e. when the .STEP command is
+used, then it will also try to open the simulation LOG file and try to obtain
+read the stepping information.
 
 RAW File Structure
 ==================
@@ -47,7 +48,7 @@ In the preamble, the lines are always started by one of the following identifier
                       * "log" -> The preferred plot view of this data is logarithmic.
                       * "stepped" -> The simulation had .STEP primitives.
                       * "FastAccess" -> Order of the data is changed to speed up access. See Binary section for details.
-   
+
    + No. Variables:  => number of variables contained in this dataset. See section below for details.
 
    + No. Points:     => number of points per each variable in
@@ -181,18 +182,20 @@ __copyright__ = "Copyright 2017, Fribourg Switzerland"
 
 import os
 from binascii import b2a_hex
+from pathlib import Path
 from struct import unpack
 
 try:
-    from numpy import zeros, array, complex128, abs as numpy_abs
+    import numpy as np
+
 except ImportError:
-    USE_NNUMPY = False
+    USE_NUMPY = False
 else:
-    USE_NNUMPY = True
-    print("Found Numpy. WIll be used for storing data")
+    USE_NUMPY = True
+    print("Found Numpy. Will be used for storing data")
 
 
-class DataSet(object):
+class DataSet:
     """
     This is the base class for storing all traces inside of a RAW file. Returned by the get_trace() or by the get_axis()
     methods.
@@ -208,15 +211,15 @@ class DataSet(object):
         self.name = name
         self.type = datatype
         self.numerical_type = numerical_type
-        if USE_NNUMPY:
+        if USE_NUMPY:
             if numerical_type == 'real':
-                self.data = zeros(datalen)
+                self.data = np.zeros(datalen)
             elif numerical_type == 'complex':
-                self.data = zeros(datalen, complex128)
+                self.data = np.zeros(datalen, np.complex128)
         else:
             self.data = [None for _ in range(datalen)]
 
-    def set_pointA(self, n, value):
+    def set_pointA(self, n, value) -> None:
         """
         Conversion function to be used on ASCII RAW Files.
         :param n: number of the point to set
@@ -228,7 +231,7 @@ class DataSet(object):
         assert isinstance(value, float)
         self.data[n] = value
 
-    def set_pointB8(self, n, value)->None:
+    def set_pointB8(self, n, value) -> None:
         """
         Function that converts the variable 0, normally associated with the plot X axis.
         The codification is done as follows:
@@ -433,8 +436,8 @@ class Axis(DataSet):
         :return: time axis
         :rtype: list[float] or numpy.array
         """
-        if USE_NNUMPY:
-            return numpy_abs(self.get_wave(step))
+        if USE_NUMPY:
+            return np.abs(self.get_wave(step))
         else:
             shallow_copy = self.get_wave(step).copy()
             for i in range(len(shallow_copy)):
@@ -500,7 +503,7 @@ class Op(Trace):
     pass
 
 
-class DummyTrace(object):
+class DummyTrace:
     """Dummy Trace for bypassing traces while reading"""
 
     def __init__(self, name, datatype):
@@ -526,7 +529,7 @@ class LTSPiceReadException(Exception):
     """Custom class for exception handling"""
 
 
-class LTSpiceRawRead(object):
+class LTSpiceRawRead:
     """Class for reading LTSpice wave Files. It can read all types of Files. If stepped data is detected,
     it will also try to read the corresponding LOG file so to retrieve the stepped data.
 
@@ -554,7 +557,7 @@ class LTSpiceRawRead(object):
 
     def __init__(self, raw_filename, traces_to_read='*', **kwargs):
         self.verbose = kwargs.get('verbose', True)
-        assert isinstance(raw_filename, str), "RAW filename is expected to be a string"
+        assert isinstance(raw_filename, (str, Path)), "RAW filename is expected to be a string or Pathlike object"
         if traces_to_read is not None:
             assert isinstance(traces_to_read, (str, list)), "traces_to_read must be a string, a list or None"
 
