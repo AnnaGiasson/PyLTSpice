@@ -107,7 +107,7 @@ import time
 from time import sleep
 import sys
 import traceback
-from typing import Callable, Any, Union
+from typing import Callable, Any, Iterable, Optional, Union
 from PyLTSpice.SpiceEditor import SpiceEditor
 
 __all__ = ('SimCommander', 'cmdline_switches', 'DEFAULT_EXE_PATH')
@@ -127,12 +127,12 @@ else:  # Windows
     LTspice_arg = {'netlist': ['-netlist'], 'run': ['-b', '-Run']}
 
 # Legacy
-LTspiceIV_exe = [Path(r"C:\Program Files (x86)\LTC\LTspiceIV\scad3.exe")]
+LTspiceIV_exe = Path(r"C:\Program Files (x86)\LTC\LTspiceIV\scad3.exe")
 
 cmdline_switches = []
 
 
-def run_function(command, timeout=None) -> int:
+def run_function(command: Iterable[str], timeout: Optional[int] = None) -> int:
     result = subprocess.run(command, timeout=timeout)
     return result.returncode
 
@@ -142,69 +142,84 @@ class RunTask(threading.Thread):
     This is an internal Class and should not be used directly by the User.
     """
 
-    def __init__(self, run_no, netlist_file: Union[Path, str],
-                 callback: Callable[[str, str], Any], **kwargs) -> None:
+    def __init__(self, n_runs: int, netlist_file: Union[Path, str],
+                 callback: Callable[[str, str], None], **kwargs) -> None:
 
         self.verbose = bool(kwargs.get('verbose', True))
         self.timeout = kwargs.get('timeout')
         self.exe_path = kwargs.get('exe_path', DEFAULT_EXE_PATH)
 
         threading.Thread.__init__(self)
-        self.run_no = int(run_no)
-        self.setName(f"sim{self.run_no}")
+        self.n_runs = int(n_runs)
+        self.setName(f"sim{self.n_runs}")
         self.netlist_file = Path(netlist_file)
         self.callback = callback
-        self.retcode = -1  # Signals an error by default
+        self.return_code = -1  # Signals an error by default
+
+    @property
+    def is_task_successful(self) -> bool:
+        return (self.return_code == 0)
 
     def run(self) -> None:
         # Setting up
-        logger = logging.getLogger("sim%d" % self.run_no)
+        logger = logging.getLogger(f"sim{self.n_runs}")
         logger.setLevel(logging.INFO)
 
-        # Running the Simulation
-        cmd_run = [str(self.exe_path),
-                   *LTspice_arg.get('run', []),
-                   str(self.netlist_file),
-                   *cmdline_switches]
-
-        # run the simulation
-        self.start_time = time.process_time()
-        if self.verbose:
-            print(f"{time.asctime()}: Starting simulation {self.run_no}")
+        cmd_run = [str(self.exe_path), *LTspice_arg.get('run', []),
+                   str(self.netlist_file), *cmdline_switches]
 
         # start execution
-        self.retcode = run_function(cmd_run, timeout=self.timeout)
+        self.start_time = time.process_time()
+        if self.verbose:
+            print(f"{time.asctime()}: Starting simulation {self.n_runs}")
 
-        # print simulation time
-        sim_time = time.strftime("%H:%M:%S", time.gmtime(time.process_time() - self.start_time))
+        self.return_code = run_function(cmd_run, timeout=self.timeout)
 
-        # Cleanup everything
-        if self.retcode == 0:
-            # simulation succesfull
-            if self.verbose:
-                print(f"{time.asctime()}: Simulation Successful. Time elapsed {sim_time}:{END_LINE_TERM}")
-            if self.callback:
-                raw_file = self.netlist_file.with_suffix('.raw')
-                log_file = self.netlist_file.with_suffix('.log')
-                if raw_file.exists() and log_file.exists():
-                    if self.verbose:
-                        print("Calling the callback function")
-                    try:
-                        self.callback(raw_file, log_file)
-                    except Exception as err:
-                        error = traceback.format_tb(err)
-                        logger.error(error)
-                else:
-                    logger.error("Simulation Raw/Log file not found")
-            else:
-                if self.verbose:
-                    print('No Callback')
+        # clean up
+        dt = time.process_time() - self.start_time
+        sim_time = time.strftime("%H:%M:%S", time.gmtime(dt))
+
+        self._cleanup_task(logger, sim_time)
+
+    def _cleanup_task(self, logger: logging.Logger, sim_time: float) -> None:
+        log_msg = (f"{time.asctime()}: Simulation "
+                   f"{'Successful' if self.is_task_successful else 'Failed'}. "
+                   f"Time elapsed: {sim_time}{END_LINE_TERM}")
+
+        if self.verbose:
+            print(log_msg)
+
+        if self.is_task_successful:
+            self._process_callback(logger)
+
         else:
             # simulation failed
-            logger.warning(f"{time.asctime()}: Simulation Failed. Time elapsed {sim_time}:{END_LINE_TERM}")
+            logger.warning(log_msg)
+
             log_file = self.netlist_file.with_suffix('.log')
             if log_file.exists():
                 log_file.rename(log_file.with_suffix('.fail'))
+
+    def _process_callback(self, logger: logging.Logger) -> None:
+
+        if not self.callback:
+            if self.verbose:
+                print('No Callback')
+            return None
+
+        raw_file = self.netlist_file.with_suffix('.raw')
+        log_file = self.netlist_file.with_suffix('.log')
+
+        if raw_file.exists() and log_file.exists():
+            if self.verbose:
+                print("Calling the callback function")
+            try:
+                self.callback(raw_file, log_file)
+            except Exception as err:
+                error = traceback.format_tb(err)
+                logger.error(error)
+        else:
+            logger.error("Simulation Raw/Log file not found")
 
 
 class SimCommander(SpiceEditor):
@@ -237,8 +252,8 @@ class SimCommander(SpiceEditor):
         self.logger.setLevel(logging.INFO)
         # TODO redirect this logger to a file.
 
-        self.runno = 0  # number of total runs
-        self.failSim = 0  # number of failed simulations
+        self.run_number = 0  # number of total runs
+        self.failed_sim_count = 0  # number of failed simulations
         self.okSim = 0  # number of succesfull completed simulations
         # self.failParam = []  # collects for later user investigation of failed parameter sets
         self.netlist = []  # Netlist needs to be created in the __init__ for LINT purposes
@@ -320,21 +335,21 @@ class SimCommander(SpiceEditor):
         if self.netlist is not None:
             # update number of simulation, using internal sim number in case a
             # run_id is not supplied
-            self.runno += 1
+            self.run_number += 1
 
             # Write the new settings
             if run_filename is None:
-                run_netlist_file = f"{self.circuit_radic}_{self.runno}.net"
+                run_netlist_file = f"{self.circuit_radic}_{self.run_number}.net"
             else:
                 run_netlist_file = run_filename
 
             self.write_netlist(run_netlist_file)
 
             while True:
-                self.updated_stats()  # purge ended tasks
+                self.update_stats()  # purge ended tasks
 
                 if (wait_resource is False) or (len(self.threads) < self.parallel_sims):
-                    t = RunTask(self.runno, run_netlist_file, callback,
+                    t = RunTask(self.run_number, run_netlist_file, callback,
                                 timeout=self.timeout, verbose=self.verbose,
                                 exe_path=self.exe_path)
                     self.threads.append(t)
@@ -343,13 +358,13 @@ class SimCommander(SpiceEditor):
                     break
                 sleep(0.1)  # Give Time for other simulations to end
 
-            return self.runno  # Just returns the simulation number
+            return self.run_number  # Just returns the simulation number
 
         else:
             # no simulation required
-            raise UserWarning(f'skipping simulation {self.runno}')
+            raise UserWarning(f'skipping simulation {self.run_number}')
 
-    def updated_stats(self) -> None:
+    def update_stats(self) -> None:
         """
         This function updates the OK/Fail statistics and releases finished
         RunTask objects from memory.
@@ -362,10 +377,10 @@ class SimCommander(SpiceEditor):
                 i += 1
                 continue
 
-            if self.threads[i].retcode == 0:
+            if self.threads[i].is_task_successful:
                 self.okSim += 1
             else:
-                self.failSim += 1
+                self.failed_sim_count += 1
             del self.threads[i]
 
     def wait_completion(self) -> None:
@@ -375,10 +390,10 @@ class SimCommander(SpiceEditor):
 
         :returns: Nothing
         """
-        self.updated_stats()
+        self.update_stats()
         while len(self.threads) > 0:
-            sleep(1)
-            self.updated_stats()
+            sleep(0.5)
+            self.update_stats()
 
 
 if __name__ == "__main__":
@@ -405,7 +420,7 @@ if __name__ == "__main__":
         print("Raw file '%s' | Log File '%s'" % (raw, log))
 
     # Sim Statistics
-    print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.runno}')
+    print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.run_number}')
 
     def callback_function(raw_file, log_file):
         print(f"Handling simulation data for {raw_file}, log file {log_file}")

@@ -43,4 +43,4 @@ LTC.run()
 LTC.wait_completion()
 
 # Sim Statistics
-print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.runno}')
+print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.run_number}')
