@@ -1,5 +1,5 @@
 
-from PyLTSpice.LTSpiceBatch import SimCommander
+from PyLTSpice.Batch import SimCommander
 
 
 class SimAnalysis(SimCommander):

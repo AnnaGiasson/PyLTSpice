@@ -552,16 +552,19 @@ class LTSpiceLogReader(object):
 
     def export_data(self, export_file: str, append_with_line_prefix=None):
         """
-        Exports the measurement information to a tab separated value (.tsv) format. If step data is found, it is
-        included in the exported file.
+        Exports the measurement information to a tab separated value (.tsv)
+        format. If step data is found, it is included in the exported file.
 
-        When using export data together with LTSpiceBatch.py classes, it may be helpful to append data to an existing
-        file. For this purpose, the user can user the append_with_line_prefix argument to indicate that an append should
-        be done. And in this case, the user must provide a string that will identify the LTSpice batch run.
+        When using export data together with Batch.py classes, it may be
+        helpful to append data to an existing file. For this purpose, the user
+        can user the append_with_line_prefix argument to indicate that an
+        append should be done. And in this case, the user must provide a string
+        that will identify the LTSpice batch run.
 
         :param export_file: path to the file containing the information
         :type export_file: str
-        :param append_with_line_prefix: user information to be written in the file in case an append is to be made.
+        :param append_with_line_prefix: user information to be written in the
+            file in case an append is to be made.
         :type append_with_line_prefix: str
         :return: Nothing
         """

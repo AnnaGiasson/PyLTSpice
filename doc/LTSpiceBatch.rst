@@ -1,6 +1,6 @@
-LTSpiceBatch.py
+Batch.py
 ===============
-.. automodule:: PyLTSpice.LTSpiceBatch
+.. automodule:: PyLTSpice.Batch
    :members:
    :undoc-members:
    :show-inheritance:

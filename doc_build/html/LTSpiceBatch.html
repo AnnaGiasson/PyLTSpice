@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LTSpiceBatch.py &#8212; PyLTSpice 2.0 documentation</title>
+    <title>Batch.py &#8212; PyLTSpice 2.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -17,24 +17,24 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="SpiceEditor.py" href="SpiceEditor.html" />
     <link rel="prev" title="&lt;no title&gt;" href="modules.html" />
-   
+
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
-  
-  
+
+
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head><body>
-  
+
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          
+
 
           <div class="body" role="main">
-            
-  <div class="section" id="module-PyLTSpice.LTSpiceBatch">
-<span id="ltspicebatch-py"></span><h1>LTSpiceBatch.py<a class="headerlink" href="#module-PyLTSpice.LTSpiceBatch" title="Permalink to this headline">¶</a></h1>
+
+  <div class="section" id="module-PyLTSpice.Batch">
+<span id="Batch-py"></span><h1>Batch.py<a class="headerlink" href="#module-PyLTSpice.Batch" title="Permalink to this headline">¶</a></h1>
 <p>Allows to launch LTSpice simulations from a Python Script, thus allowing to overcome the 3 dimensions STEP limitation on
 LTSpice, update resistor values, or component models.</p>
 <p>In the code snipped below will simulate a circuit with two different diode models, setting the simulation
@@ -99,15 +99,11 @@ The RAW file and the LOG file names. Below is an example of a callback function:
 <p>The callback function is optional. if there no callback function is given then thread is terminated just after the
 simulation is finished.</p>
 <dl class="py class">
-<dt id="PyLTSpice.LTSpiceBatch.LTCommander">
-<em class="property">class </em><code class="sig-prename descclassname">PyLTSpice.LTSpiceBatch.</code><code class="sig-name descname">LTCommander</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">circuit_file</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#LTCommander"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.LTCommander" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#PyLTSpice.LTSpiceBatch.SimCommander" title="PyLTSpice.LTSpiceBatch.SimCommander"><code class="xref py py-class docutils literal notranslate"><span class="pre">PyLTSpice.LTSpiceBatch.SimCommander</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#PyLTSpice.Batch.SimCommander" title="PyLTSpice.Batch.SimCommander"><code class="xref py py-class docutils literal notranslate"><span class="pre">PyLTSpice.Batch.SimCommander</span></code></a></p>
 <p><em>(Deprecated)</em></p>
 <p>Class for launching batch LTSpice simulations. Please use the new SimCommander class instead of LTCommander which
 supports multi-processing.</p>
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.LTCommander.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">run_id</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#LTCommander.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.LTCommander.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes a simulation run with the conditions set by the user. (See also set_parameter, set_component_value,
 add_instruction)
 :param run_id: The run_id parameter can be used to override the naming protocol of the log files.
@@ -115,21 +111,16 @@ add_instruction)
 :returns: (raw filename, log filename) if simulation is successful else (None, log file name)</p>
 </dd></dl>
 
-<dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.LTCommander.write_log">
-<code class="sig-name descname">write_log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">text</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#LTCommander.write_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.LTCommander.write_log" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 </dd></dl>
 
 <dl class="py class">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander">
-<em class="property">class </em><code class="sig-prename descclassname">PyLTSpice.LTSpiceBatch.</code><code class="sig-name descname">SimCommander</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">circuit_file</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">parallel_sims</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">4</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander">
+<em class="property">class </em><code class="sig-prename descclassname">PyLTSpice.Batch.</code><code class="sig-name descname">SimCommander</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">circuit_file</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">parallel_sims</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">4</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="SpiceEditor.html#PyLTSpice.SpiceEditor.SpiceEditor" title="PyLTSpice.SpiceEditor.SpiceEditor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PyLTSpice.SpiceEditor.SpiceEditor</span></code></a></p>
 <p>The SimCommander class implements all the methods required for launching batches of LTSpice simulations.</p>
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander.add_LTspiceRunCmdLineSwitches">
-<code class="sig-name descname">add_LTspiceRunCmdLineSwitches</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander.add_LTspiceRunCmdLineSwitches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander.add_LTspiceRunCmdLineSwitches" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander.add_LTspiceRunCmdLineSwitches">
+<code class="sig-name descname">add_LTspiceRunCmdLineSwitches</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander.add_LTspiceRunCmdLineSwitches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander.add_LTspiceRunCmdLineSwitches" title="Permalink to this definition">¶</a></dt>
 <dd><p>Used to add an extra command line argument such as -I&lt;path&gt; to add symbol search path or -FastAccess
 to convert the raw file into Fast Access.
 The arguments is a list of strings as is defined in the LTSpice command line documentation.</p>
@@ -146,8 +137,8 @@ setting the solver to alternate. See Command Line Switches information on LTSpic
 </dd></dl>
 
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">run_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">wait_resource</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">callback</span><span class="p">:</span> <span class="n">Callable<span class="p">[</span><span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span><span class="p">, </span>Any<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander.run" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">run_filename</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">wait_resource</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">callback</span><span class="p">:</span> <span class="n">Callable<span class="p">[</span><span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span><span class="p">, </span>Any<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes a simulation run with the conditions set by the user.
 Conditions are set by the set_parameter, set_component_value or add_instruction functions.</p>
 <dl class="field-list simple">
@@ -175,8 +166,8 @@ be immediately done.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander.setLTspiceVersion">
-<code class="sig-name descname">setLTspiceVersion</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exe</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander.setLTspiceVersion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander.setLTspiceVersion" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander.setLTspiceVersion">
+<code class="sig-name descname">setLTspiceVersion</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exe</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander.setLTspiceVersion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander.setLTspiceVersion" title="Permalink to this definition">¶</a></dt>
 <dd><p>For the ones that still can have access to the old IV version, you can select which version to use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -189,8 +180,8 @@ be immediately done.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander.updated_stats">
-<code class="sig-name descname">updated_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander.updated_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander.updated_stats" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander.updated_stats">
+<code class="sig-name descname">updated_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander.updated_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander.updated_stats" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function updates the OK/Fail statistics and releases finished RunTask objects from memory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -200,8 +191,8 @@ be immediately done.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="PyLTSpice.LTSpiceBatch.SimCommander.wait_completion">
-<code class="sig-name descname">wait_completion</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/LTSpiceBatch.html#SimCommander.wait_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.LTSpiceBatch.SimCommander.wait_completion" title="Permalink to this definition">¶</a></dt>
+<dt id="PyLTSpice.Batch.SimCommander.wait_completion">
+<code class="sig-name descname">wait_completion</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/PyLTSpice/Batch.html#SimCommander.wait_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyLTSpice.Batch.SimCommander.wait_completion" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function will wait for the execution of all scheduled simulations to complete.
 TODO: Implement the timeout to kill stalled simulations</p>
 <dl class="field-list simple">
@@ -218,7 +209,7 @@ TODO: Implement the timeout to kill stalled simulations</p>
 
 
           </div>
-          
+
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -235,7 +226,7 @@ TODO: Implement the timeout to kill stalled simulations</p>
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">LTSpiceBatch.py</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Batch.py</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#multiprocessing">Multiprocessing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#callbacks">Callbacks</a></li>
 </ul>
@@ -282,18 +273,18 @@ TODO: Implement the timeout to kill stalled simulations</p>
     </div>
     <div class="footer">
       &copy;2021, Nuno Brum.
-      
+
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
-      
+
       |
-      <a href="_sources/LTSpiceBatch.rst.txt"
+      <a href="_sources/Batch.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
-    
 
-    
+
+
   </body>
 </html>

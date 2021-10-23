@@ -9,7 +9,7 @@ setuptools.setup(
     scripts=['PyLTSpice\\__init__.py',
              'PyLTSpice\\Histogram.py',
              'PyLTSpice\\LTSpice_RawRead.py',
-             'PyLTSpice\\LTSpiceBatch.py',
+             'PyLTSpice\\Batch.py',
              'PyLTSpice\\LTSteps.py',
              'PyLTSpice\\LTSpice_SemiDevOpReader.py',
              # 'PyLTSpice\\sketch.py'

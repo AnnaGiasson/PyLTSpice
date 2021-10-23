@@ -1,11 +1,13 @@
-import os
-from PyLTSpice.LTSpiceBatch import SimCommander
+from pathlib import Path
+from PyLTSpice.Batch import SimCommander
+
 
 def processing_data(raw_file, log_file):
-    print("Handling the simulation data of %s, log file %s" % (raw_file, log_file))
+    print(f"Handling the simulation data of {raw_file}, log file {log_file}")
+
 
 # get script absolute path
-meAbsPath = os.path.dirname(os.path.realpath(__file__))
+meAbsPath = Path(__file__).parent.resolve()
 # select spice model
 LTC = SimCommander(meAbsPath + "\\Batch_Test.asc")
 # set default arguments
@@ -25,7 +27,7 @@ for opamp in ('AD712', 'AD820'):
         LTC.set_component_value('V1', supply_voltage)
         LTC.set_component_value('V2', -supply_voltage)
         # overriding he automatic netlist naming
-        run_netlist_file = "{}_{}_{}.net".format(LTC.circuit_radic, opamp, supply_voltage)
+        run_netlist_file = f"{LTC.circuit_radic}_{opamp}_{supply_voltage}.net"
         LTC.run(run_filename=run_netlist_file, callback=processing_data)
 
 
@@ -33,7 +35,7 @@ LTC.reset_netlist()
 LTC.add_instructions(
     "; Simulation settings",
     ".ac dec 30 10 1Meg",
-    ".meas AC Gain MAX mag(V(out)) ; find the peak response and call it ""Gain""",
+    '.meas AC Gain MAX mag(V(out)); find the peak response and call it "Gain"',
     ".meas AC Fcut TRIG mag(V(out))=Gain/sqrt(2) FALL=last"
 )
 
@@ -41,4 +43,4 @@ LTC.run()
 LTC.wait_completion()
 
 # Sim Statistics
-print('Successful/Total Simulations: ' + str(LTC.okSim) + '/' + str(LTC.runno))
+print(f'Successful/Total Simulations: {LTC.okSim}/{LTC.runno}')
